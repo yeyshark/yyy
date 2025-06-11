@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>幼儿园签到系统</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header img {
+            width: 100px;
+            height: 100px;
+        }
+        .form-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .success-container {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .success-image {
+            max-width: 100%;
+            height: auto;
+            margin-top: 20px;
+        }
+        .admin-section {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="logo.png" alt="幼儿园logo">
+        <h1>幼儿签到系统</h1>
+    </div>
+    
+    <div class="form-container">
+        <form id="signForm">
+            <div class="form-group">
+                <label for="childName">1. 幼儿姓名</label>
+                <input type="text" id="childName" required placeholder="请输入幼儿姓名">
+            </div>
+            <div class="form-group">
+                <label for="className">2. 幼儿所在班级</label>
+                <input type="text" id="className" required placeholder="例如: 小一班">
+            </div>
+            <div class="form-group">
+                <label for="parentName">3. 家长姓名</label>
+                <input type="text" id="parentName" required placeholder="请输入家长姓名">
+            </div>
+            <button type="submit">提交签到</button>
+        </form>
+        
+        <div class="success-container" id="successContainer">
+            <h2>签到成功！</h2>
+            <img class="success-image" src="success.png" alt="签到成功">
+            <p>感谢您的参与</p>
+        </div>
+    </div>
+    
+    <!-- 管理员区域 - 可以添加密码保护 -->
+    <div class="admin-section" id="adminSection">
+        <h2>数据管理</h2>
+        <button onclick="exportData()">导出签到数据(Excel)</button>
+        <button onclick="clearData()" style="background-color: #f44336; margin-top: 10px;">清空所有数据</button>
+        <div id="dataPreview" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        // 显示/隐藏管理员区域
+        document.getElementById('adminSection').style.display = 'none';
+        
+        // 显示管理员区域的简单密码验证
+        const password = prompt("请输入管理员密码(默认:123)");
+        if (password === "123") {
+            document.getElementById('adminSection').style.display = 'block';
+            loadDataPreview();
+        }
+
+        // 提交表单
+        document.getElementById('signForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 获取表单数据
+            const childName = document.getElementById('childName').value;
+            const className = document.getElementById('className').value;
+            const parentName = document.getElementById('parentName').value;
+            const signTime = new Date().toLocaleString('zh-CN');
+            
+            // 存储数据到localStorage
+            let signData = JSON.parse(localStorage.getItem('signData') || '[]');
+            signData.push({ 
+                幼儿姓名: childName, 
+                幼儿班级: className, 
+                家长姓名: parentName, 
+                签到时间: signTime 
+            });
+            localStorage.setItem('signData', JSON.stringify(signData));
+            
+            // 显示成功信息
+            document.getElementById('signForm').style.display = 'none';
+            document.getElementById('successContainer').style.display = 'block';
+            
+            // 5秒后重置表单
+            setTimeout(() => {
+                document.getElementById('signForm').reset();
+                document.getElementById('signForm').style.display = 'block';
+                document.getElementById('successContainer').style.display = 'none';
+            }, 5000);
+        });
+        
+        // 导出Excel数据
+        function exportData() {
+            const signData = JSON.parse(localStorage.getItem('signData') || '[]');
+            if (signData.length === 0) {
+                alert('没有签到数据');
+                return;
+            }
+            
+            // 创建CSV内容
+            let csv = '\uFEFF'; // UTF-8 BOM
+            csv += '幼儿姓名,幼儿班级,家长姓名,签到时间\n';
+            
+            signData.forEach(item => {
+                csv += `"${item.幼儿姓名}","${item.幼儿班级}","${item.家长姓名}","${item.签到时间}"\n`;
+            });
+            
+            // 创建下载链接
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `幼儿签到数据_${new Date().toLocaleDateString()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // 清空数据
+        function clearData() {
+            if (confirm('确定要清空所有签到数据吗？此操作不可撤销！')) {
+                localStorage.removeItem('signData');
+                loadDataPreview();
+                alert('数据已清空');
+            }
+        }
+        
+        // 加载数据预览
+        function loadDataPreview() {
+            const signData = JSON.parse(localStorage.getItem('signData') || '[]');
+            const preview = document.getElementById('dataPreview');
+            
+            if (signData.length === 0) {
+                preview.innerHTML = '<p>暂无签到数据</p>';
+                return;
+            }
+            
+            let html = '<h3>最近5条签到记录:</h3><ul>';
+            const recentData = signData.slice(-5).reverse();
+            recentData.forEach(item => {
+                html += `<li>${item.幼儿姓名} (${item.幼儿班级}) - ${item.家长姓名} - ${item.签到时间}</li>`;
+            });
+            html += `</ul><p>总记录数: ${signData.length} 条</p>`;
+            
+            preview.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
